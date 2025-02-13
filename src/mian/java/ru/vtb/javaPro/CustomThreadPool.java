@@ -4,15 +4,20 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class CustomThreadPool {
-    List<Worker> workerList = new ArrayList<>(); // список потоков
+    private List<Worker> workerList = new ArrayList<>(); // список потоков
     List<Runnable> runnableList = new LinkedList<>(); // список задач
     CountDownLatch countDownLatch; // защелка для определения что все потоки завершились при shutdown
-    private volatile boolean bShutDown = false;
+    private AtomicBoolean bShutDown = new AtomicBoolean();
 
-    private final static Object monitor = new Object(); // монитор, по которому будем синхрониизироваться
+//    private final static Object monitor = new Object(); // монитор, по которому будем синхрониизироваться
 
     public CustomThreadPool(int cntThreads) {
         countDownLatch = new CountDownLatch(cntThreads);
@@ -24,7 +29,7 @@ public class CustomThreadPool {
     }
 
     public class Worker extends Thread {
-        int numberThread;
+        private int numberThread;
 
         public Worker(int numberThread) {
             this.numberThread = numberThread;
@@ -35,12 +40,12 @@ public class CustomThreadPool {
             try {
                 while (true) {
                     System.out.println("Запуск потока № " + numberThread);
-                    synchronized (monitor) {
+                    synchronized (workerList) {
                         TimeUnit.SECONDS.sleep(2 * (int) (numberThread * Math.random()));
                         if (runnableList.isEmpty()) {
                             System.out.println("Попали в wait");
                             countDownLatch.countDown();
-                            monitor.wait();
+                            workerList.wait();
                         } else {
                             Runnable runnable = runnableList.get(0);
                             if (runnable != null) {
@@ -57,28 +62,29 @@ public class CustomThreadPool {
     }
 
     public void execute(Runnable runnable) {
-        if (bShutDown) throw new IllegalStateException("Задачи больше не принимаются, выполнен метод shutdown");
-        synchronized (monitor) {
+        if (bShutDown.get()) throw new IllegalStateException("Задачи больше не принимаются, выполнен метод shutdown");
+        synchronized (workerList) {
             runnableList.add(runnable);
-            monitor.notifyAll();
+            workerList.notifyAll();
         }
     }
 
     public void shutdown() {
         System.out.println("Запуск shutdown");
-        bShutDown = true;
+        bShutDown.set(true);
         for (Worker worker: workerList) {
             worker.interrupt();
         }
     }
 
-    public void awaitTermination() {
+    public boolean awaitTermination() {
         System.out.println("Запуск awaitTermination");
-        shutdown();
         try {
             countDownLatch.await();
+            return true;
         } catch (InterruptedException e) {
             e.printStackTrace();
+            return false;
         }
     }
 }

@@ -13,7 +13,7 @@ public class MainThread {
         }
 
         Thread.sleep(2000);
-        customThreadPool.shutdown();
+//        customThreadPool.shutdown();
 
         for (int i = 10; i < 20; i++) {
             int exec = i;
@@ -21,6 +21,6 @@ public class MainThread {
                 System.out.println("2 итерация. Добавить задачу " + exec + " на исполнение");
             });
         }
-//        customThreadPool.awaitTermination();
+        System.out.println(customThreadPool.awaitTermination());
     }
 }
