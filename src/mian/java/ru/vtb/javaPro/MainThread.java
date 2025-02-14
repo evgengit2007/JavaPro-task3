@@ -21,6 +21,6 @@ public class MainThread {
                 System.out.println("2 итерация. Добавить задачу " + exec + " на исполнение");
             });
         }
-        System.out.println(customThreadPool.awaitTermination());
+        customThreadPool.awaitTermination();
     }
 }

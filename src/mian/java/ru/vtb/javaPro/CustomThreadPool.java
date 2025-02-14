@@ -33,22 +33,21 @@ public class CustomThreadPool {
                     System.out.println("Запуск потока № " + numberThread);
                     synchronized (runnableList) {
                         TimeUnit.SECONDS.sleep(2 * (int) (numberThread * Math.random()));
-                        if (runnableList.isEmpty() && !bShutDown.get()) {
+                        if (!runnableList.isEmpty()) {
+                            Runnable runnable = runnableList.get(0);
+                            if (runnable != null) {
+                                runnable.run();
+                                runnableList.remove(0);
+                            }
+                        } else if (!bShutDown.get()) {
                             System.out.println("Работа потока " + numberThread + " завершена по сигналу awaitTermination");
                             countDownLatch.countDown();
                             break;
-                        }
-                        if (runnableList.isEmpty()) {
+                        } else {
                             System.out.println("Попали в wait, поток " + numberThread);
                             runnableList.wait();
-                        } else {
-                                Runnable runnable = runnableList.get(0);
-                                if (runnable != null) {
-                                    runnable.run();
-                                    runnableList.remove(0);
-                                }
-                            }
                         }
+                    }
                 }
             } catch (InterruptedException e) {
                 System.out.println("Работа потока " + numberThread + " завершена с ошибкой");
